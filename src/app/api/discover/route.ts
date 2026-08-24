@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { discoverTitles } from "@/lib/tmdb";
+import { MAX_PAGES } from "@/lib/discovery-feed";
+import { ALLOWED_PROVIDER_IDS } from "@/lib/providers";
 
 export async function GET(request: NextRequest) {
   const mediaType = request.nextUrl.searchParams.get("mediaType");
@@ -19,17 +21,26 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  if (!/^[A-Z]{2}$/.test(watchRegion)) {
+    return NextResponse.json(
+      { error: "Invalid watchRegion" },
+      { status: 400 }
+    );
+  }
+
   const providerIds = providerIdsParam
     .split(",")
     .map((id) => parseInt(id, 10))
-    .filter((id) => !isNaN(id));
+    .filter((id) => !isNaN(id) && ALLOWED_PROVIDER_IDS.has(id));
 
   if (providerIds.length === 0) {
     return NextResponse.json({ error: "Invalid providerIds" }, { status: 400 });
   }
 
   const parsedPage = parseInt(pageParam ?? "1", 10);
-  const page = isNaN(parsedPage) ? 1 : parsedPage;
+  const page = isNaN(parsedPage)
+    ? 1
+    : Math.min(Math.max(parsedPage, 1), MAX_PAGES);
 
   try {
     const { results, totalPages } = await discoverTitles({

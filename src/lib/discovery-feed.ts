@@ -17,6 +17,9 @@ export interface FetchDiscoveryFeedParams {
   maxPages: number;
   targetCount: number;
   selectedProviderIds: number[];
+  /** Mutated in place: populated with cache misses as they are fetched. The
+   * caller (hook) owns a session-lifetime cache and passes it in by reference
+   * intentionally, so this map's contents change as a side effect of the call. */
   cache: Map<string, CountryAvailability[]>;
   fetchDiscoverPage: (
     page: number
@@ -53,15 +56,23 @@ export async function fetchDiscoveryFeed(
   let page = startPage;
   let lastFetchedPage = startPage - 1;
   let totalPages = Infinity;
+  let emptyPageReached = false;
 
   while (items.length < targetCount && page <= Math.min(totalPages, maxPages)) {
     const { results, totalPages: pageTotalPages } = await fetchDiscoverPage(page);
     totalPages = pageTotalPages;
     lastFetchedPage = page;
 
-    if (results.length === 0) break;
+    if (results.length === 0) {
+      emptyPageReached = true;
+      break;
+    }
 
     const misses = results.filter((r) => !cache.has(`${mediaType}-${r.id}`));
+    // Fires up to one /api/providers request per cache miss (up to ~20 per discover
+    // page) concurrently with no throttling and no server-side caching. Acceptable
+    // for a single-user pilot; revisit with chunked concurrency or a short-TTL
+    // server cache before this sees concurrent users.
     const fetched = await Promise.all(
       misses.map((r) => fetchProviders(r.id, mediaType))
     );
@@ -93,7 +104,8 @@ export async function fetchDiscoveryFeed(
     page += 1;
   }
 
-  const hasMore = lastFetchedPage < Math.min(totalPages, maxPages);
+  const hasMore =
+    !emptyPageReached && lastFetchedPage < Math.min(totalPages, maxPages);
 
   return { items, lastPage: lastFetchedPage, hasMore };
 }

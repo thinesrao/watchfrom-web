@@ -38,7 +38,7 @@ export function useDiscoveryFeed(
   providerIds: number[]
 ) {
   const [items, setItems] = useState<DiscoveryItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const cacheRef = useRef<Map<string, CountryAvailability[]>>(new Map());
@@ -67,7 +67,14 @@ export function useDiscoveryFeed(
         });
         // Only apply results if this is still the latest request
         if (requestId === generationRef.current) {
-          setItems((prev) => (reset ? result.items : [...prev, ...result.items]));
+          setItems((prev) => {
+            if (reset) return result.items;
+            const seen = new Set(prev.map((i) => `${i.mediaType}-${i.id}`));
+            return [
+              ...prev,
+              ...result.items.filter((i) => !seen.has(`${i.mediaType}-${i.id}`)),
+            ];
+          });
           nextPageRef.current = result.lastPage + 1;
           setHasMore(result.hasMore);
         }
