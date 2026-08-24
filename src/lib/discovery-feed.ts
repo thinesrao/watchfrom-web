@@ -49,6 +49,7 @@ export async function fetchDiscoveryFeed(
   } = params;
 
   const items: DiscoveryItem[] = [];
+  const seenItems = new Set<string>();
   let page = startPage;
   let lastFetchedPage = startPage - 1;
   let totalPages = Infinity;
@@ -67,7 +68,10 @@ export async function fetchDiscoveryFeed(
     misses.forEach((r, i) => cache.set(`${mediaType}-${r.id}`, fetched[i]));
 
     for (const result of results) {
-      const availability = cache.get(`${mediaType}-${result.id}`) ?? [];
+      const itemKey = `${mediaType}-${result.id}`;
+      if (seenItems.has(itemKey)) continue;
+
+      const availability = cache.get(itemKey) ?? [];
       if (!isUnlockable(availability, selectedProviderIds)) continue;
 
       const sourceCountry = availability.find((c) => c.countryCode === watchRegion);
@@ -75,6 +79,7 @@ export async function fetchDiscoveryFeed(
         .filter((p) => p.providerType === "flatrate")
         .find((p) => selectedProviderIds.includes(p.providerId))?.providerId;
 
+      seenItems.add(itemKey);
       items.push({
         ...result,
         countryCode: watchRegion,

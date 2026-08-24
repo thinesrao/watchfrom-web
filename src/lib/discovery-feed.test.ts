@@ -143,4 +143,33 @@ describe("fetchDiscoveryFeed", () => {
     expect(result.items).toEqual([]);
     expect(result.hasMore).toBe(false);
   });
+
+  it("deduplicates items across pages when TMDB returns overlapping results", async () => {
+    // Page 1 returns items 1 and 2, page 2 returns items 2 and 3
+    // Item 2 appears on both pages and should only appear once in the final items
+    const page1 = { results: [title(1), title(2)], totalPages: 2 };
+    const page2 = { results: [title(2), title(3)], totalPages: 2 };
+    const fetchDiscoverPage = vi
+      .fn()
+      .mockResolvedValueOnce(page1)
+      .mockResolvedValueOnce(page2);
+
+    const fetchProviders = vi.fn(async () => availabilityWithSg(null, 8));
+
+    const result = await fetchDiscoveryFeed({
+      mediaType: "movie",
+      watchRegion: "US",
+      startPage: 1,
+      maxPages: MAX_PAGES,
+      targetCount: 5,
+      selectedProviderIds: [8],
+      cache: new Map(),
+      fetchDiscoverPage,
+      fetchProviders,
+    });
+
+    // Should have items 1, 2, 3 (not 2 twice)
+    expect(result.items.map((i) => i.id)).toEqual([1, 2, 3]);
+    expect(result.items).toHaveLength(3);
+  });
 });
