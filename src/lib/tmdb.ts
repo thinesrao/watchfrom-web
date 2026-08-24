@@ -96,3 +96,45 @@ export async function getWatchProviders(
   availability.sort((a, b) => a.countryName.localeCompare(b.countryName));
   return availability;
 }
+
+export async function discoverTitles(params: {
+  mediaType: "movie" | "tv";
+  watchRegion: string;
+  providerIds: number[];
+  page: number;
+}): Promise<{ results: SearchResult[]; totalPages: number }> {
+  const { mediaType, watchRegion, providerIds, page } = params;
+  const url =
+    `${BASE_URL}/discover/${mediaType}?watch_region=${watchRegion}` +
+    `&with_watch_providers=${providerIds.join("|")}` +
+    `&with_watch_monetization_types=flatrate&sort_by=popularity.desc&page=${page}`;
+  const res = await fetch(url, { headers: headers() });
+
+  if (!res.ok) {
+    throw new Error(`TMDB discover failed: ${res.status}`);
+  }
+
+  const data = await res.json();
+
+  const results: SearchResult[] = (data.results ?? []).map(
+    (item: Record<string, unknown>): SearchResult => {
+      const isMovie = mediaType === "movie";
+      const title = (isMovie ? item.title : item.name) as string;
+      const date = (isMovie ? item.release_date : item.first_air_date) as
+        | string
+        | null;
+
+      return {
+        id: item.id as number,
+        title,
+        mediaType,
+        posterPath: item.poster_path as string | null,
+        releaseYear: date ? date.substring(0, 4) : null,
+        overview: item.overview as string | null,
+        voteAverage: item.vote_average as number | null,
+      };
+    }
+  );
+
+  return { results, totalPages: (data.total_pages as number) ?? 1 };
+}
