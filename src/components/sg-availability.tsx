@@ -2,6 +2,7 @@
 
 import type { CountryAvailability } from "@/lib/types";
 import ProviderLogo from "./provider-logo";
+import { filterAllowedProviders } from "@/lib/providers";
 
 export default function SgAvailability({
   availability,
@@ -20,9 +21,10 @@ export default function SgAvailability({
     );
   }
 
-  const flatrate = sg.providers.filter((p) => p.providerType === "flatrate");
-  const rent = sg.providers.filter((p) => p.providerType === "rent");
-  const buy = sg.providers.filter((p) => p.providerType === "buy");
+  const allowed = filterAllowedProviders(sg.providers);
+  const flatrate = allowed.filter((p) => p.providerType === "flatrate");
+  const rent = allowed.filter((p) => p.providerType === "rent");
+  const buy = allowed.filter((p) => p.providerType === "buy");
 
   if (flatrate.length === 0 && rent.length === 0 && buy.length === 0) {
     return (

@@ -6,7 +6,7 @@ export const SERVICES = [
   { key: "prime", label: "Prime Video", providerIds: [119, 9] },
 ] as const;
 
-export const ALLOWED_PROVIDER_IDS = new Set(
+export const ALLOWED_PROVIDER_IDS = new Set<number>(
   SERVICES.flatMap((service) => service.providerIds)
 );
 

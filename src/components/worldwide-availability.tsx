@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import type { CountryAvailability } from "@/lib/types";
 import { flagEmoji } from "@/lib/countries";
+import { filterAllowedProviders } from "@/lib/providers";
 
 interface ProviderGroup {
   providerId: number;
@@ -17,7 +18,9 @@ function groupByProvider(availability: CountryAvailability[]): ProviderGroup[] {
   const map = new Map<number, ProviderGroup>();
 
   for (const country of nonSg) {
-    const flatrate = country.providers.filter((p) => p.providerType === "flatrate");
+    const flatrate = filterAllowedProviders(country.providers).filter(
+      (p) => p.providerType === "flatrate"
+    );
     for (const provider of flatrate) {
       const existing = map.get(provider.providerId);
       const countryEntry = {
