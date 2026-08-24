@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #000000;
+  --surface: #161616;
+  --surface-dim: #1A1A1A;
+  --border: #252525;
+  --text: #FFFFFF;
+  --text-dim: #777777;
+  --accent: #FF6B4A;
+  --accent-hover: #FF8266;
+  --gold: #FFD700;
+  --font-body: var(--font-dm-sans), "DM Sans", system-ui, sans-serif;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-dim: var(--text-dim);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-gold: var(--gold);
+  --font-sans: var(--font-body);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+input::placeholder {
+  color: var(--text-dim);
+}
