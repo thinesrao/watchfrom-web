@@ -1,12 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import type { CountryAvailability as CountryAvailabilityType, WatchProvider } from "@/lib/types";
 import { useWatchlist } from "@/lib/use-watchlist";
-import CountryAvailability from "@/components/country-availability";
+import SgAvailability from "@/components/sg-availability";
+import WorldwideAvailability from "@/components/worldwide-availability";
+
+function hasAvailabilityChanged(
+  snapshot: Record<string, WatchProvider[]>,
+  live: CountryAvailabilityType[]
+): boolean {
+  const liveSnapshot: Record<string, number[]> = {};
+  for (const country of live) {
+    const flatrate = country.providers
+      .filter((p) => p.providerType === "flatrate")
+      .map((p) => p.providerId)
+      .sort();
+    if (flatrate.length > 0) {
+      liveSnapshot[country.countryCode] = flatrate;
+    }
+  }
+
+  const savedKeys = Object.keys(snapshot).sort();
+  const liveKeys = Object.keys(liveSnapshot).sort();
+
+  if (savedKeys.length !== liveKeys.length) return true;
+  if (savedKeys.join(",") !== liveKeys.join(",")) return true;
+
+  for (const key of savedKeys) {
+    const savedIds = snapshot[key].map((p) => p.providerId).sort();
+    const liveIds = liveSnapshot[key];
+    if (savedIds.length !== liveIds.length) return true;
+    if (savedIds.join(",") !== liveIds.join(",")) return true;
+  }
+
+  return false;
+}
 
 export default function DetailPage() {
   const params = useParams();
@@ -20,10 +52,21 @@ export default function DetailPage() {
   const [availability, setAvailability] = useState<CountryAvailabilityType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { isInWatchlist, addToWatchlist, removeFromWatchlist } = useWatchlist();
+  const { items, isInWatchlist, addToWatchlist, removeFromWatchlist, updateSnapshot } =
+    useWatchlist();
 
   const tmdbId = parseInt(id, 10);
   const inWatchlist = isInWatchlist(tmdbId);
+
+  const watchlistItem = useMemo(
+    () => items.find((i) => i.tmdbId === tmdbId),
+    [items, tmdbId]
+  );
+
+  const changed = useMemo(() => {
+    if (!watchlistItem || availability.length === 0) return false;
+    return hasAvailabilityChanged(watchlistItem.availabilitySnapshot, availability);
+  }, [watchlistItem, availability]);
 
   useEffect(() => {
     async function load() {
@@ -43,26 +86,34 @@ export default function DetailPage() {
     load();
   }, [id, type]);
 
+  const buildSnapshot = (): Record<string, WatchProvider[]> => {
+    const snapshot: Record<string, WatchProvider[]> = {};
+    for (const country of availability) {
+      const flatrate = country.providers.filter((p) => p.providerType === "flatrate");
+      if (flatrate.length > 0) {
+        snapshot[country.countryCode] = flatrate;
+      }
+    }
+    return snapshot;
+  };
+
   const handleToggleWatchlist = () => {
     if (inWatchlist) {
       removeFromWatchlist(tmdbId);
     } else {
-      const snapshot: Record<string, WatchProvider[]> = {};
-      for (const country of availability) {
-        const flatrate = country.providers.filter((p) => p.providerType === "flatrate");
-        if (flatrate.length > 0) {
-          snapshot[country.countryCode] = flatrate;
-        }
-      }
       addToWatchlist({
         tmdbId,
         title,
         mediaType: type as "movie" | "tv",
         posterPath: poster,
         releaseYear: year,
-        availabilitySnapshot: snapshot,
+        availabilitySnapshot: buildSnapshot(),
       });
     }
+  };
+
+  const handleUpdateSnapshot = () => {
+    updateSnapshot(tmdbId, buildSnapshot());
   };
 
   return (
@@ -104,6 +155,18 @@ export default function DetailPage() {
         </div>
       </div>
 
+      {changed && (
+        <div className="bg-gold/10 border border-gold/30 rounded-lg px-4 py-3 flex items-center justify-between">
+          <p className="text-sm text-gold">Availability has changed since you saved this.</p>
+          <button
+            onClick={handleUpdateSnapshot}
+            className="text-xs text-gold hover:text-gold/80 underline transition-colors"
+          >
+            Update snapshot
+          </button>
+        </div>
+      )}
+
       {loading && (
         <div className="flex justify-center py-12">
           <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
@@ -131,7 +194,10 @@ export default function DetailPage() {
       )}
 
       {!loading && !error && availability.length > 0 && (
-        <CountryAvailability availability={availability} />
+        <>
+          <SgAvailability availability={availability} />
+          <WorldwideAvailability availability={availability} />
+        </>
       )}
     </div>
   );

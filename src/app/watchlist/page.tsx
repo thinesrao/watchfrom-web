@@ -3,6 +3,38 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useWatchlist } from "@/lib/use-watchlist";
+import type { WatchlistItem } from "@/lib/types";
+
+function topProviderSummary(item: WatchlistItem): string | null {
+  const snapshot = item.availabilitySnapshot;
+  const countryCodes = Object.keys(snapshot);
+  if (countryCodes.length === 0) return null;
+
+  const providerCounts = new Map<string, string[]>();
+  for (const code of countryCodes) {
+    for (const provider of snapshot[code]) {
+      const existing = providerCounts.get(provider.providerName) ?? [];
+      providerCounts.set(provider.providerName, [...existing, code]);
+    }
+  }
+
+  let topName = "";
+  let topCodes: string[] = [];
+  for (const [name, codes] of providerCounts) {
+    if (codes.length > topCodes.length) {
+      topName = name;
+      topCodes = codes;
+    }
+  }
+
+  if (topName.length === 0) return null;
+
+  const preview = topCodes.slice(0, 3).join(", ");
+  const remaining = topCodes.length - 3;
+  return remaining > 0
+    ? `${topName}: ${preview} +${remaining}`
+    : `${topName}: ${preview}`;
+}
 
 export default function WatchlistPage() {
   const { items, removeFromWatchlist } = useWatchlist();
@@ -40,7 +72,8 @@ export default function WatchlistPage() {
             ? `https://image.tmdb.org/t/p/w185${item.posterPath}`
             : null;
 
-          const streamingCountries = Object.keys(item.availabilitySnapshot).length;
+          const summary = topProviderSummary(item);
+          const detailUrl = `/detail/${item.tmdbId}?type=${item.mediaType}&title=${encodeURIComponent(item.title)}&poster=${encodeURIComponent(item.posterPath ?? "")}&year=${item.releaseYear ?? ""}`;
 
           return (
             <div
@@ -48,7 +81,7 @@ export default function WatchlistPage() {
               className="flex gap-3 bg-surface border border-border rounded-lg p-3"
             >
               <Link
-                href={`/detail/${item.tmdbId}?type=${item.mediaType}&title=${encodeURIComponent(item.title)}&poster=${encodeURIComponent(item.posterPath ?? "")}&year=${item.releaseYear ?? ""}`}
+                href={detailUrl}
                 className="w-16 h-24 shrink-0 rounded overflow-hidden bg-surface-dim block"
               >
                 {posterUrl ? (
@@ -68,7 +101,7 @@ export default function WatchlistPage() {
               <div className="flex-1 min-w-0 flex flex-col justify-between">
                 <div>
                   <Link
-                    href={`/detail/${item.tmdbId}?type=${item.mediaType}&title=${encodeURIComponent(item.title)}&poster=${encodeURIComponent(item.posterPath ?? "")}&year=${item.releaseYear ?? ""}`}
+                    href={detailUrl}
                     className="font-semibold text-sm hover:text-accent transition-colors"
                   >
                     {item.title}
@@ -78,14 +111,13 @@ export default function WatchlistPage() {
                       {item.mediaType === "movie" ? "Movie" : "TV"}
                     </span>
                     {item.releaseYear && (
-                      <span className="text-xs text-text-dim">{item.releaseYear}</span>
+                      <span className="text-xs text-text-dim">
+                        {item.releaseYear}
+                      </span>
                     )}
                   </div>
-                  {streamingCountries > 0 && (
-                    <p className="text-xs text-text-dim mt-1">
-                      Streaming in {streamingCountries}{" "}
-                      {streamingCountries === 1 ? "country" : "countries"}
-                    </p>
+                  {summary && (
+                    <p className="text-xs text-text-dim mt-1">{summary}</p>
                   )}
                 </div>
                 <button
