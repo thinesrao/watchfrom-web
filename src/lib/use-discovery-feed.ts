@@ -43,10 +43,12 @@ export function useDiscoveryFeed(
   const [hasMore, setHasMore] = useState(true);
   const cacheRef = useRef<Map<string, CountryAvailability[]>>(new Map());
   const nextPageRef = useRef(1);
+  const generationRef = useRef<number>(0);
   const providerIdsKey = providerIds.join(",");
 
   const run = useCallback(
     async (reset: boolean) => {
+      const requestId = ++generationRef.current;
       setLoading(true);
       setError(null);
       try {
@@ -63,13 +65,22 @@ export function useDiscoveryFeed(
             fetchDiscoverPage(mediaType, watchRegion, providerIds, page),
           fetchProviders,
         });
-        setItems((prev) => (reset ? result.items : [...prev, ...result.items]));
-        nextPageRef.current = result.lastPage + 1;
-        setHasMore(result.hasMore);
+        // Only apply results if this is still the latest request
+        if (requestId === generationRef.current) {
+          setItems((prev) => (reset ? result.items : [...prev, ...result.items]));
+          nextPageRef.current = result.lastPage + 1;
+          setHasMore(result.hasMore);
+        }
       } catch {
-        setError("Failed to load the discovery feed. Please try again.");
+        // Only apply error if this is still the latest request
+        if (requestId === generationRef.current) {
+          setError("Failed to load the discovery feed. Please try again.");
+        }
       } finally {
-        setLoading(false);
+        // Only clear loading if this was the latest request
+        if (requestId === generationRef.current) {
+          setLoading(false);
+        }
       }
     },
     // providerIdsKey stands in for providerIds (array identity is unstable across renders)
