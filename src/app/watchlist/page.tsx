@@ -46,7 +46,7 @@ export default function WatchlistPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Watchlist</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight">Watchlist</h1>
         <p className="text-text-dim text-sm">
           {items.length === 0
             ? "Your watchlist is empty. Search for something to watch."
@@ -78,7 +78,7 @@ export default function WatchlistPage() {
           return (
             <div
               key={item.tmdbId}
-              className="flex gap-3 bg-surface border border-border rounded-lg p-3"
+              className="glass flex gap-3 rounded-xl p-3"
             >
               <Link
                 href={detailUrl}

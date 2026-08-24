@@ -57,7 +57,7 @@ export default function WorldwideAvailability({
 
   if (groups.length === 0) {
     return (
-      <div className="bg-surface border border-border rounded-lg p-4">
+      <div className="glass rounded-xl p-4">
         <p className="text-text-dim text-sm">
           No streaming availability data worldwide.
         </p>
@@ -67,7 +67,7 @@ export default function WorldwideAvailability({
 
   return (
     <div className="space-y-3">
-      <h2 className="font-semibold">Worldwide Streaming</h2>
+      <h2 className="font-display font-semibold">Worldwide Streaming</h2>
       <p className="text-text-dim text-xs">
         Connect your VPN to any of these countries to stream.
       </p>
@@ -84,7 +84,7 @@ export default function WorldwideAvailability({
               onClick={() =>
                 setExpandedProvider(isExpanded ? null : group.providerId)
               }
-              className="w-full text-left bg-surface border border-border rounded-lg p-3 hover:border-accent/40 transition-colors"
+              className="glass w-full text-left rounded-xl p-3 hover:border-accent/40 transition-colors"
             >
               <div className="flex items-center gap-3">
                 <Image

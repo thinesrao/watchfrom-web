@@ -1,16 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #000000;
-  --surface: #161616;
-  --surface-dim: #1A1A1A;
-  --border: #252525;
-  --text: #FFFFFF;
-  --text-dim: #777777;
-  --accent: #FF6B4A;
-  --accent-hover: #FF8266;
-  --gold: #FFD700;
+  --bg: #070A10;
+  --surface: #10151D;
+  --surface-dim: #0B0F15;
+  --border: rgba(148, 163, 184, 0.16);
+  --glass: rgba(203, 213, 225, 0.055);
+  --glass-border: rgba(203, 213, 225, 0.14);
+  --glass-highlight: rgba(226, 232, 240, 0.3);
+  --text: #E7ECF3;
+  --text-dim: #63708A;
+  --accent: #45C7DB;
+  --accent-hover: #6DDBEB;
+  --gold: #E8A45C;
   --font-body: var(--font-dm-sans), "DM Sans", system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), "Space Grotesk", var(--font-body);
 }
 
 @theme inline {
@@ -24,10 +28,15 @@
   --color-accent-hover: var(--accent-hover);
   --color-gold: var(--gold);
   --font-sans: var(--font-body);
+  --font-display: var(--font-display);
 }
 
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 14% -6%, rgba(69, 199, 219, 0.10) 0%, transparent 42%),
+    radial-gradient(circle at 92% 8%, rgba(94, 149, 219, 0.07) 0%, transparent 38%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-body);
 }
@@ -39,4 +48,25 @@ body {
 
 input::placeholder {
   color: var(--text-dim);
+}
+
+.glass {
+  position: relative;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(180deg, var(--glass-highlight), transparent 40%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }

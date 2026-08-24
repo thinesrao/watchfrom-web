@@ -73,7 +73,7 @@ export default function SearchPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Find where to watch</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight">Find where to watch</h1>
         <p className="text-text-dim text-sm">
           Search for any movie or TV show to see streaming availability in
           Singapore and worldwide.
@@ -100,7 +100,7 @@ export default function SearchPage() {
       </div>
 
       {showHistory && (
-        <div className="bg-surface border border-border rounded-lg overflow-hidden">
+        <div className="glass rounded-xl overflow-hidden">
           <div className="flex items-center justify-between px-3 py-2 border-b border-border">
             <p className="text-xs text-text-dim uppercase tracking-wide">
               Recent Searches
@@ -135,7 +135,7 @@ export default function SearchPage() {
       )}
 
       {error && (
-        <div className="bg-surface-dim border border-border rounded-lg p-4 text-center">
+        <div className="glass rounded-xl p-4 text-center">
           <p className="text-text-dim">{error}</p>
         </div>
       )}

@@ -30,7 +30,7 @@ export default function DiscoveryPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Discovery</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight">Discovery</h1>
         <p className="text-text-dim text-sm">
           Titles popular abroad on your services that aren&apos;t streaming
           here in Singapore yet.
@@ -84,7 +84,7 @@ export default function DiscoveryPage() {
       </div>
 
       {error && (
-        <div className="bg-surface-dim border border-border rounded-lg p-4 text-center space-y-2">
+        <div className="glass rounded-xl p-4 text-center space-y-2">
           <p className="text-text-dim">{error}</p>
           <button
             onClick={loadMore}
@@ -117,7 +117,7 @@ export default function DiscoveryPage() {
         </div>
       )}
 
-      {!loading && hasMore && (
+      {!loading && hasMore && !error && (
         <div className="flex justify-center">
           <button
             onClick={loadMore}

@@ -11,7 +11,7 @@ export default function DiscoveryCard({ item }: { item: DiscoveryItem }) {
   return (
     <Link
       href={`/detail/${item.id}?type=${item.mediaType}&title=${encodeURIComponent(item.title)}&poster=${encodeURIComponent(item.posterPath ?? "")}&year=${item.releaseYear ?? ""}`}
-      className="flex gap-3 bg-surface border border-border rounded-lg p-3 hover:border-accent/40 transition-colors group"
+      className="glass flex gap-3 rounded-xl p-3 hover:border-accent/40 transition-colors group"
     >
       <div className="w-16 h-24 shrink-0 rounded overflow-hidden bg-surface-dim">
         {posterUrl ? (
@@ -41,7 +41,7 @@ export default function DiscoveryCard({ item }: { item: DiscoveryItem }) {
           )}
         </div>
         {item.matchedProviderLabel && (
-          <span className="inline-flex w-fit items-center gap-1 bg-surface-dim rounded px-2 py-0.5 text-xs">
+          <span className="inline-flex w-fit items-center gap-1 bg-accent/10 border border-accent/25 text-accent rounded-full px-2 py-0.5 text-xs">
             {flagEmoji(item.countryCode)} {item.countryCode} {item.matchedProviderLabel}
           </span>
         )}

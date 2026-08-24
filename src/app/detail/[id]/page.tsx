@@ -135,7 +135,7 @@ export default function DetailPage() {
           </div>
         )}
         <div className="space-y-2">
-          <h1 className="text-xl font-bold">{title}</h1>
+          <h1 className="font-display text-xl font-semibold tracking-tight">{title}</h1>
           <div className="flex items-center gap-2">
             <span className="text-xs text-text-dim uppercase tracking-wide">
               {type === "movie" ? "Movie" : "TV Show"}
@@ -174,7 +174,7 @@ export default function DetailPage() {
       )}
 
       {error && (
-        <div className="bg-surface-dim border border-border rounded-lg p-4 text-center space-y-2">
+        <div className="glass rounded-xl p-4 text-center space-y-2">
           <p className="text-text-dim">{error}</p>
           <button
             onClick={() => window.location.reload()}
@@ -186,7 +186,7 @@ export default function DetailPage() {
       )}
 
       {!loading && !error && availability.length === 0 && (
-        <div className="bg-surface-dim border border-border rounded-lg p-6 text-center">
+        <div className="glass rounded-xl p-6 text-center">
           <p className="text-text-dim">
             No streaming data available for this title.
           </p>
