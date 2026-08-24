@@ -27,12 +27,20 @@ export default function RootLayout({
             <Link href="/" className="text-accent font-bold text-xl tracking-tight">
               WatchFrom
             </Link>
-            <Link
-              href="/watchlist"
-              className="text-text-dim hover:text-text transition-colors text-sm font-medium"
-            >
-              Watchlist
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/discovery"
+                className="text-text-dim hover:text-text transition-colors text-sm font-medium"
+              >
+                Discovery
+              </Link>
+              <Link
+                href="/watchlist"
+                className="text-text-dim hover:text-text transition-colors text-sm font-medium"
+              >
+                Watchlist
+              </Link>
+            </div>
           </div>
         </nav>
         <main className="flex-1 max-w-5xl mx-auto px-4 py-6 w-full">
