@@ -44,7 +44,7 @@ export default function SearchPage() {
         } finally {
           setLoading(false);
         }
-      }, 400);
+      }, 500);
     },
     [addEntry]
   );

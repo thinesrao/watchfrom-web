@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, Space_Grotesk } from "next/font/google";
 import Link from "next/link";
+import BottomNav from "@/components/bottom-nav";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -39,7 +40,7 @@ export default function RootLayout({
             >
               WatchFrom
             </Link>
-            <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-4">
               <Link
                 href="/discovery"
                 className="text-text-dim hover:text-text transition-colors text-sm font-medium"
@@ -55,9 +56,10 @@ export default function RootLayout({
             </div>
           </div>
         </nav>
-        <main className="flex-1 max-w-5xl mx-auto px-4 py-6 w-full">
+        <main className="flex-1 max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-6 w-full">
           {children}
         </main>
+        <BottomNav />
       </body>
     </html>
   );
