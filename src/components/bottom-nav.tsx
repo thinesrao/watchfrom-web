@@ -49,28 +49,37 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="sm:hidden fixed bottom-0 inset-x-0 z-50 glass border-x-0 border-b-0 pb-[env(safe-area-inset-bottom)]">
-      <div className="flex items-stretch justify-around h-16">
+    <nav
+      className="sm:hidden fixed z-50 left-3 right-3 glass rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.45)]"
+      style={{ bottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+    >
+      <div className="flex items-stretch justify-around h-16 px-1">
         {TABS.map((tab) => {
           const active = tab.match(pathname);
           return (
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors ${
+              className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition-colors ${
                 active ? "text-accent" : "text-text-dim"
               }`}
             >
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.6}
+              <span
+                className={`flex items-center justify-center w-9 h-9 rounded-full transition-colors ${
+                  active ? "bg-accent/15" : ""
+                }`}
               >
-                {tab.icon}
-              </svg>
+                <svg
+                  width="21"
+                  height="21"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.6}
+                >
+                  {tab.icon}
+                </svg>
+              </span>
               {tab.label}
             </Link>
           );

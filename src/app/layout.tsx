@@ -32,31 +32,33 @@ export default function RootLayout({
       className={`${dmSans.variable} ${spaceGrotesk.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <nav className="sticky top-0 z-50 glass border-x-0 border-t-0">
-          <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-            <Link
-              href="/"
-              className="font-display font-semibold text-xl tracking-tight bg-gradient-to-r from-accent to-[#A8E6F0] bg-clip-text text-transparent"
-            >
-              WatchFrom
-            </Link>
-            <div className="hidden sm:flex items-center gap-4">
+        <div className="sticky top-0 z-50 px-3 pt-3 sm:px-6">
+          <nav className="max-w-5xl mx-auto glass rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
+            <div className="px-4 h-14 flex items-center justify-between">
               <Link
-                href="/discovery"
-                className="text-text-dim hover:text-text transition-colors text-sm font-medium"
+                href="/"
+                className="font-display font-semibold text-xl tracking-tight bg-gradient-to-r from-accent to-[#A8E6F0] bg-clip-text text-transparent"
               >
-                Discovery
+                WatchFrom
               </Link>
-              <Link
-                href="/watchlist"
-                className="text-text-dim hover:text-text transition-colors text-sm font-medium"
-              >
-                Watchlist
-              </Link>
+              <div className="hidden sm:flex items-center gap-4">
+                <Link
+                  href="/discovery"
+                  className="text-text-dim hover:text-text transition-colors text-sm font-medium"
+                >
+                  Discovery
+                </Link>
+                <Link
+                  href="/watchlist"
+                  className="text-text-dim hover:text-text transition-colors text-sm font-medium"
+                >
+                  Watchlist
+                </Link>
+              </div>
             </div>
-          </div>
-        </nav>
-        <main className="flex-1 max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-6 w-full">
+          </nav>
+        </div>
+        <main className="flex-1 max-w-5xl mx-auto px-4 py-6 pb-28 sm:pb-6 w-full">
           {children}
         </main>
         <BottomNav />
