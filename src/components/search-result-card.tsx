@@ -13,7 +13,7 @@ export default function SearchResultCard({ result }: { result: SearchResult }) {
 
   return (
     <Link
-      href={`/detail/${result.id}?type=${result.mediaType}&title=${encodeURIComponent(result.title)}&poster=${encodeURIComponent(result.posterPath ?? "")}&year=${result.releaseYear ?? ""}`}
+      href={`/detail/${result.id}?type=${result.mediaType}&title=${encodeURIComponent(result.title)}&poster=${encodeURIComponent(result.posterPath ?? "")}&year=${result.releaseYear ?? ""}&vote=${result.voteAverage ?? ""}&overview=${encodeURIComponent(result.overview ?? "")}`}
       className="glass relative flex gap-3 rounded-xl p-3 hover:border-accent/40 transition-colors group"
     >
       <div className="w-16 h-24 shrink-0 rounded overflow-hidden bg-surface-dim">
