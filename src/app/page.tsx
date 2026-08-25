@@ -1,16 +1,54 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { SearchResult } from "@/lib/types";
 import { useSearchHistory } from "@/lib/use-search-history";
 import SearchResultCard from "@/components/search-result-card";
 
+const SEARCH_CACHE_KEY = "watchfrom:search-cache";
+
+function loadSearchCache(): {
+  query: string;
+  results: SearchResult[];
+} | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(SEARCH_CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function saveSearchCache(query: string, results: SearchResult[]) {
+  try {
+    sessionStorage.setItem(
+      SEARCH_CACHE_KEY,
+      JSON.stringify({ query, results })
+    );
+  } catch {
+    /* quota exceeded — ignore */
+  }
+}
+
+function clearSearchCache() {
+  try {
+    sessionStorage.removeItem(SEARCH_CACHE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 export default function SearchPage() {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const cached = useRef(loadSearchCache());
+  const [query, setQuery] = useState(cached.current?.query ?? "");
+  const [results, setResults] = useState<SearchResult[]>(
+    cached.current?.results ?? []
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searched, setSearched] = useState(false);
+  const [searched, setSearched] = useState(!!cached.current?.results.length);
   const [focused, setFocused] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   const { entries, addEntry, removeEntry, clearAll } = useSearchHistory();
@@ -23,6 +61,7 @@ export default function SearchPage() {
         setResults([]);
         setSearched(false);
         setError(null);
+        clearSearchCache();
         return;
       }
 
@@ -37,6 +76,7 @@ export default function SearchPage() {
           const data = await res.json();
           setResults(data.results);
           setSearched(true);
+          saveSearchCache(q.trim(), data.results);
           if (saveHistory) addEntry(q.trim());
         } catch {
           setError("Something went wrong. Please try again.");
