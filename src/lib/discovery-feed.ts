@@ -1,6 +1,7 @@
 import type { CountryAvailability, MediaType, SearchResult } from "./types";
 import { isUnlockable } from "./discovery-eligibility";
 import { serviceLabelForProviderId } from "./providers";
+import type { DiscoverSortBy } from "./sort-options";
 
 export const TARGET_COUNT = 12;
 export const MAX_PAGES = 5;
@@ -12,16 +13,29 @@ export interface DiscoveryItem extends SearchResult {
 
 export interface FetchDiscoveryFeedParams {
   mediaType: MediaType;
-  watchRegion: string;
+  /** Countries to search, in priority order. A single-element array is the
+   * existing single-country mode; multiple entries fan out one discover
+   * call per country per page and merge the results. The first region in
+   * this list whose availability has a matching flatrate provider is used
+   * to attribute each item's badge (countryCode/matchedProviderLabel),
+   * independent of which region's discover page it was found on. */
+  watchRegions: string[];
   startPage: number;
   maxPages: number;
   targetCount: number;
   selectedProviderIds: number[];
+  genreIds?: number[];
+  sortBy?: DiscoverSortBy;
+  voteCountGte?: number;
+  dateGte?: string;
+  dateLte?: string;
+  crewId?: number;
   /** Mutated in place: populated with cache misses as they are fetched. The
    * caller (hook) owns a session-lifetime cache and passes it in by reference
    * intentionally, so this map's contents change as a side effect of the call. */
   cache: Map<string, CountryAvailability[]>;
   fetchDiscoverPage: (
+    watchRegion: string,
     page: number
   ) => Promise<{ results: SearchResult[]; totalPages: number }>;
   fetchProviders: (
@@ -36,12 +50,25 @@ export interface FetchDiscoveryFeedResult {
   hasMore: boolean;
 }
 
+export function mergeDiscoveryResults(resultSets: SearchResult[][]): SearchResult[] {
+  const seen = new Set<number>();
+  const merged: SearchResult[] = [];
+  for (const results of resultSets) {
+    for (const result of results) {
+      if (seen.has(result.id)) continue;
+      seen.add(result.id);
+      merged.push(result);
+    }
+  }
+  return merged;
+}
+
 export async function fetchDiscoveryFeed(
   params: FetchDiscoveryFeedParams
 ): Promise<FetchDiscoveryFeedResult> {
   const {
     mediaType,
-    watchRegion,
+    watchRegions,
     startPage,
     maxPages,
     targetCount,
@@ -59,18 +86,42 @@ export async function fetchDiscoveryFeed(
   let emptyPageReached = false;
 
   while (items.length < targetCount && page <= Math.min(totalPages, maxPages)) {
-    const { results, totalPages: pageTotalPages } = await fetchDiscoverPage(page);
-    totalPages = pageTotalPages;
+    const pageResultsPerRegion = await Promise.allSettled(
+      watchRegions.map((region) => fetchDiscoverPage(region, page))
+    );
+
+    pageResultsPerRegion.forEach((r, i) => {
+      if (r.status === "rejected") {
+        console.error(
+          `Discovery feed: failed to fetch region ${watchRegions[i]} page ${page}:`,
+          r.reason
+        );
+      }
+    });
+
+    const fulfilled = pageResultsPerRegion.filter(
+      (r): r is PromiseFulfilledResult<{ results: SearchResult[]; totalPages: number }> =>
+        r.status === "fulfilled"
+    );
+
+    if (fulfilled.length === 0) {
+      throw new Error("Failed to load discovery feed for any region");
+    }
+
+    totalPages = Math.min(...fulfilled.map((r) => r.value.totalPages));
     lastFetchedPage = page;
 
-    if (results.length === 0) {
+    const merged = mergeDiscoveryResults(fulfilled.map((r) => r.value.results));
+
+    if (merged.length === 0) {
       emptyPageReached = true;
       break;
     }
 
-    const misses = results.filter((r) => !cache.has(`${mediaType}-${r.id}`));
+    const misses = merged.filter((r) => !cache.has(`${mediaType}-${r.id}`));
     // Fires up to one /api/providers request per cache miss (up to ~20 per discover
-    // page) concurrently with no throttling and no server-side caching. Acceptable
+    // page, multiplied by however many regions are being searched in "All countries"
+    // mode) concurrently with no throttling and no server-side caching. Acceptable
     // for a single-user pilot; revisit with chunked concurrency or a short-TTL
     // server cache before this sees concurrent users.
     const fetched = await Promise.all(
@@ -78,14 +129,20 @@ export async function fetchDiscoveryFeed(
     );
     misses.forEach((r, i) => cache.set(`${mediaType}-${r.id}`, fetched[i]));
 
-    for (const result of results) {
+    for (const result of merged) {
       const itemKey = `${mediaType}-${result.id}`;
       if (seenItems.has(itemKey)) continue;
 
       const availability = cache.get(itemKey) ?? [];
       if (!isUnlockable(availability, selectedProviderIds)) continue;
 
-      const sourceCountry = availability.find((c) => c.countryCode === watchRegion);
+      const sourceCountry = watchRegions
+        .map((region) => availability.find((c) => c.countryCode === region))
+        .find((c) =>
+          c?.providers.some(
+            (p) => p.providerType === "flatrate" && selectedProviderIds.includes(p.providerId)
+          )
+        );
       const matchedProviderId = sourceCountry?.providers
         .filter((p) => p.providerType === "flatrate")
         .find((p) => selectedProviderIds.includes(p.providerId))?.providerId;
@@ -93,7 +150,7 @@ export async function fetchDiscoveryFeed(
       seenItems.add(itemKey);
       items.push({
         ...result,
-        countryCode: watchRegion,
+        countryCode: sourceCountry?.countryCode ?? watchRegions[0],
         matchedProviderLabel:
           matchedProviderId != null
             ? serviceLabelForProviderId(matchedProviderId)

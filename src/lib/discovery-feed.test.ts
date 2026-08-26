@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { fetchDiscoveryFeed, TARGET_COUNT, MAX_PAGES } from "./discovery-feed";
+import { fetchDiscoveryFeed, mergeDiscoveryResults, TARGET_COUNT, MAX_PAGES } from "./discovery-feed";
 import type { CountryAvailability, SearchResult } from "./types";
 
 function title(id: number): SearchResult {
@@ -41,6 +41,27 @@ function availabilityWithSg(
   return countries;
 }
 
+describe("mergeDiscoveryResults", () => {
+  it("merges multiple result sets deduped by id, preserving first-seen order", () => {
+    const merged = mergeDiscoveryResults([
+      [title(1), title(2)],
+      [title(2), title(3)],
+      [title(4)],
+    ]);
+
+    expect(merged.map((r) => r.id)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("returns an empty array when given no result sets", () => {
+    expect(mergeDiscoveryResults([])).toEqual([]);
+  });
+
+  it("handles a single result set unchanged", () => {
+    const merged = mergeDiscoveryResults([[title(1), title(2)]]);
+    expect(merged.map((r) => r.id)).toEqual([1, 2]);
+  });
+});
+
 describe("fetchDiscoveryFeed", () => {
   it("keeps only unlockable titles and reports pagination state", async () => {
     const page1 = { results: [title(1), title(2), title(3)], totalPages: 2 };
@@ -58,7 +79,7 @@ describe("fetchDiscoveryFeed", () => {
 
     const result = await fetchDiscoveryFeed({
       mediaType: "movie",
-      watchRegion: "US",
+      watchRegions: ["US"],
       startPage: 1,
       maxPages: MAX_PAGES,
       targetCount: 3,
@@ -74,6 +95,8 @@ describe("fetchDiscoveryFeed", () => {
     expect(result.lastPage).toBe(2);
     expect(result.hasMore).toBe(false);
     expect(fetchDiscoverPage).toHaveBeenCalledTimes(2);
+    expect(fetchDiscoverPage).toHaveBeenNthCalledWith(1, "US", 1);
+    expect(fetchDiscoverPage).toHaveBeenNthCalledWith(2, "US", 2);
   });
 
   it("stops paginating once the target count is reached", async () => {
@@ -86,7 +109,7 @@ describe("fetchDiscoveryFeed", () => {
 
     const result = await fetchDiscoveryFeed({
       mediaType: "movie",
-      watchRegion: "US",
+      watchRegions: ["US"],
       startPage: 1,
       maxPages: MAX_PAGES,
       targetCount: 3,
@@ -110,7 +133,7 @@ describe("fetchDiscoveryFeed", () => {
 
     const result = await fetchDiscoveryFeed({
       mediaType: "movie",
-      watchRegion: "US",
+      watchRegions: ["US"],
       startPage: 1,
       maxPages: MAX_PAGES,
       targetCount: 3,
@@ -130,7 +153,7 @@ describe("fetchDiscoveryFeed", () => {
 
     const result = await fetchDiscoveryFeed({
       mediaType: "movie",
-      watchRegion: "US",
+      watchRegions: ["US"],
       startPage: 1,
       maxPages: MAX_PAGES,
       targetCount: TARGET_COUNT,
@@ -145,8 +168,6 @@ describe("fetchDiscoveryFeed", () => {
   });
 
   it("deduplicates items across pages when TMDB returns overlapping results", async () => {
-    // Page 1 returns items 1 and 2, page 2 returns items 2 and 3
-    // Item 2 appears on both pages and should only appear once in the final items
     const page1 = { results: [title(1), title(2)], totalPages: 2 };
     const page2 = { results: [title(2), title(3)], totalPages: 2 };
     const fetchDiscoverPage = vi
@@ -158,7 +179,7 @@ describe("fetchDiscoveryFeed", () => {
 
     const result = await fetchDiscoveryFeed({
       mediaType: "movie",
-      watchRegion: "US",
+      watchRegions: ["US"],
       startPage: 1,
       maxPages: MAX_PAGES,
       targetCount: 5,
@@ -168,8 +189,87 @@ describe("fetchDiscoveryFeed", () => {
       fetchProviders,
     });
 
-    // Should have items 1, 2, 3 (not 2 twice)
     expect(result.items.map((i) => i.id)).toEqual([1, 2, 3]);
     expect(result.items).toHaveLength(3);
+  });
+
+  it("merges results across multiple watch regions and attributes each item to the first matching region", async () => {
+    const fetchDiscoverPage = vi.fn(async (region: string) => {
+      if (region === "US") return { results: [title(1), title(2)], totalPages: 1 };
+      if (region === "GB") return { results: [title(2), title(3)], totalPages: 1 };
+      return { results: [], totalPages: 1 };
+    });
+
+    // title 2 streams the selected provider in GB but not US; title 1 and 3 stream in US-only
+    const fetchProviders = vi.fn(async (id: number): Promise<CountryAvailability[]> => {
+      if (id === 2) {
+        return [
+          { countryCode: "GB", countryName: "United Kingdom", flagEmoji: "🇬🇧", providers: [
+            { providerId: 8, providerName: "Netflix", logoPath: "/n.jpg", providerType: "flatrate" },
+          ] },
+        ];
+      }
+      return availabilityWithSg(null, 8);
+    });
+
+    const result = await fetchDiscoveryFeed({
+      mediaType: "movie",
+      watchRegions: ["US", "GB"],
+      startPage: 1,
+      maxPages: MAX_PAGES,
+      targetCount: 5,
+      selectedProviderIds: [8],
+      cache: new Map(),
+      fetchDiscoverPage,
+      fetchProviders,
+    });
+
+    expect(result.items.map((i) => i.id).sort()).toEqual([1, 2, 3]);
+    const item2 = result.items.find((i) => i.id === 2)!;
+    expect(item2.countryCode).toBe("GB");
+    expect(item2.matchedProviderLabel).toBe("Netflix");
+    expect(fetchDiscoverPage).toHaveBeenCalledWith("US", 1);
+    expect(fetchDiscoverPage).toHaveBeenCalledWith("GB", 1);
+  });
+
+  it("proceeds with successful regions when some regions fail", async () => {
+    const fetchDiscoverPage = vi.fn(async (region: string) => {
+      if (region === "US") return { results: [title(1)], totalPages: 1 };
+      throw new Error("network error");
+    });
+    const fetchProviders = vi.fn(async () => availabilityWithSg(null, 8));
+
+    const result = await fetchDiscoveryFeed({
+      mediaType: "movie",
+      watchRegions: ["US", "GB"],
+      startPage: 1,
+      maxPages: MAX_PAGES,
+      targetCount: 5,
+      selectedProviderIds: [8],
+      cache: new Map(),
+      fetchDiscoverPage,
+      fetchProviders,
+    });
+
+    expect(result.items.map((i) => i.id)).toEqual([1]);
+  });
+
+  it("throws when every region fails", async () => {
+    const fetchDiscoverPage = vi.fn().mockRejectedValue(new Error("network error"));
+    const fetchProviders = vi.fn();
+
+    await expect(
+      fetchDiscoveryFeed({
+        mediaType: "movie",
+        watchRegions: ["US", "GB"],
+        startPage: 1,
+        maxPages: MAX_PAGES,
+        targetCount: 5,
+        selectedProviderIds: [8],
+        cache: new Map(),
+        fetchDiscoverPage,
+        fetchProviders,
+      })
+    ).rejects.toThrow();
   });
 });
