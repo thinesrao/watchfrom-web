@@ -254,6 +254,38 @@ describe("fetchDiscoveryFeed", () => {
     expect(result.items.map((i) => i.id)).toEqual([1]);
   });
 
+  it("proceeds with results from successful provider lookups when some provider lookups fail", async () => {
+    const page1 = { results: [title(1), title(2), title(3)], totalPages: 1 };
+    const fetchDiscoverPage = vi.fn().mockResolvedValue(page1);
+
+    const fetchProviders = vi.fn(async (id: number) => {
+      if (id === 2) throw new Error("provider lookup failed");
+      return availabilityWithSg(null, 8);
+    });
+
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await fetchDiscoveryFeed({
+      mediaType: "movie",
+      watchRegions: ["US"],
+      startPage: 1,
+      maxPages: MAX_PAGES,
+      targetCount: 5,
+      selectedProviderIds: [8],
+      cache: new Map(),
+      fetchDiscoverPage,
+      fetchProviders,
+    });
+
+    // title 2's provider lookup failed, but is still treated as unlockable
+    // (no availability data == not confirmed already-in-SG) rather than
+    // aborting the whole batch.
+    expect(result.items.map((i) => i.id).sort()).toEqual([1, 2, 3]);
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
+
   it("throws when every region fails", async () => {
     const fetchDiscoverPage = vi.fn().mockRejectedValue(new Error("network error"));
     const fetchProviders = vi.fn();

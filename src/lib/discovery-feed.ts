@@ -1,7 +1,6 @@
 import type { CountryAvailability, MediaType, SearchResult } from "./types";
 import { isUnlockable } from "./discovery-eligibility";
 import { serviceLabelForProviderId } from "./providers";
-import type { DiscoverSortBy } from "./sort-options";
 
 export const TARGET_COUNT = 12;
 export const MAX_PAGES = 5;
@@ -24,12 +23,6 @@ export interface FetchDiscoveryFeedParams {
   maxPages: number;
   targetCount: number;
   selectedProviderIds: number[];
-  genreIds?: number[];
-  sortBy?: DiscoverSortBy;
-  voteCountGte?: number;
-  dateGte?: string;
-  dateLte?: string;
-  crewId?: number;
   /** Mutated in place: populated with cache misses as they are fetched. The
    * caller (hook) owns a session-lifetime cache and passes it in by reference
    * intentionally, so this map's contents change as a side effect of the call. */
@@ -124,10 +117,22 @@ export async function fetchDiscoveryFeed(
     // mode) concurrently with no throttling and no server-side caching. Acceptable
     // for a single-user pilot; revisit with chunked concurrency or a short-TTL
     // server cache before this sees concurrent users.
-    const fetched = await Promise.all(
+    const fetchedSettled = await Promise.allSettled(
       misses.map((r) => fetchProviders(r.id, mediaType))
     );
-    misses.forEach((r, i) => cache.set(`${mediaType}-${r.id}`, fetched[i]));
+    fetchedSettled.forEach((r, i) => {
+      if (r.status === "rejected") {
+        console.error(
+          `Discovery feed: failed to fetch providers for ${mediaType}-${misses[i].id}:`,
+          r.reason
+        );
+        // Treat as no availability data for this pass (consistent with the
+        // `cache.get(itemKey) ?? []` fallback below for missing entries), but
+        // do NOT cache the failure so a later page/retry can fetch it again.
+        return;
+      }
+      cache.set(`${mediaType}-${misses[i].id}`, r.value);
+    });
 
     for (const result of merged) {
       const itemKey = `${mediaType}-${result.id}`;

@@ -85,6 +85,13 @@ export function useDiscoveryFeed(
       const requestId = ++generationRef.current;
       setLoading(true);
       setError(null);
+      if (reset) {
+        // Clear stale results from a prior filter selection immediately so a
+        // failed fetch after a filter change doesn't leave old-filter items
+        // rendered underneath the error box.
+        setItems([]);
+        setHasMore(true);
+      }
       try {
         const startPage = reset ? 1 : nextPageRef.current;
         const result = await fetchDiscoveryFeed({
@@ -94,12 +101,6 @@ export function useDiscoveryFeed(
           maxPages: MAX_PAGES,
           targetCount: TARGET_COUNT,
           selectedProviderIds: providerIds,
-          genreIds: filters.genreIds,
-          sortBy: filters.sortBy,
-          voteCountGte: filters.voteCountGte,
-          dateGte: filters.dateGte,
-          dateLte: filters.dateLte,
-          crewId: filters.crewId,
           cache: cacheRef.current,
           fetchDiscoverPage: (watchRegion, page) =>
             fetchDiscoverPage(mediaType, watchRegion, providerIds, page, filters),
@@ -141,6 +142,7 @@ export function useDiscoveryFeed(
   }, [mediaType, watchRegionsKey, providerIdsKey, genreIdsKey, filtersKey]);
 
   const loadMore = useCallback(() => run(false), [run]);
+  const retry = useCallback(() => run(true), [run]);
 
-  return { items, loading, error, hasMore, loadMore };
+  return { items, loading, error, hasMore, loadMore, retry };
 }

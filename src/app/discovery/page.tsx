@@ -29,6 +29,19 @@ export default function DiscoveryPage() {
   const [directorId, setDirectorId] = useState<number | null>(null);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
 
+  // Reset the genre filter when switching movie<->TV: genre ids are not
+  // shared between the two TMDB genre taxonomies (e.g. movie-only Horror=27
+  // doesn't exist in TV_GENRES), so a stale id would silently produce no
+  // results and an invisible/empty active-filter chip. Adjusted during
+  // render (not an effect) per the React "adjusting state when a prop
+  // changes" pattern, since it must happen before the discovery feed fetch
+  // fires with the new mediaType.
+  const [prevMediaType, setPrevMediaType] = useState(mediaType);
+  if (mediaType !== prevMediaType) {
+    setPrevMediaType(mediaType);
+    setGenreId(null);
+  }
+
   const providerIds =
     serviceKey === "all"
       ? SERVICES.flatMap((s) => s.providerIds)
@@ -54,7 +67,7 @@ export default function DiscoveryPage() {
 
   const effectiveDirectorId = mediaType === "movie" ? directorId ?? undefined : undefined;
 
-  const { items, loading, error, hasMore, loadMore } = useDiscoveryFeed(
+  const { items, loading, error, hasMore, loadMore, retry } = useDiscoveryFeed(
     mediaType,
     watchRegions,
     [...providerIds],
@@ -163,7 +176,7 @@ export default function DiscoveryPage() {
           <p className="text-text-dim">{error}</p>
           <button
             type="button"
-            onClick={loadMore}
+            onClick={retry}
             className="text-accent text-sm hover:text-accent-hover"
           >
             Retry
