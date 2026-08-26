@@ -32,9 +32,12 @@ export default function MoreFiltersSheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center sm:justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden="true" />
-      <div className="relative glass rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[80vh] overflow-y-auto p-4 space-y-5">
+      <div
+        className="relative bg-surface border border-border rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[80vh] overflow-y-auto p-4 space-y-5 shadow-[0_8px_30px_rgba(0,0,0,0.45)]"
+        style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+      >
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-sm">More filters</h2>
           <button
