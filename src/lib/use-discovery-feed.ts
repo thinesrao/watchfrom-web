@@ -8,16 +8,40 @@ import {
   type DiscoveryItem,
 } from "./discovery-feed";
 import type { CountryAvailability, MediaType } from "./types";
+import type { DiscoverSortBy } from "./sort-options";
+
+export interface DiscoveryFilterParams {
+  genreIds?: number[];
+  sortBy?: DiscoverSortBy;
+  voteCountGte?: number;
+  dateGte?: string;
+  dateLte?: string;
+  crewId?: number;
+}
 
 async function fetchDiscoverPage(
   mediaType: MediaType,
   watchRegion: string,
   providerIds: number[],
-  page: number
+  page: number,
+  filters: DiscoveryFilterParams
 ) {
-  const res = await fetch(
-    `/api/discover?mediaType=${mediaType}&watchRegion=${watchRegion}&providerIds=${providerIds.join(",")}&page=${page}`
-  );
+  const query = new URLSearchParams({
+    mediaType,
+    watchRegion,
+    providerIds: providerIds.join(","),
+    page: String(page),
+  });
+  if (filters.genreIds && filters.genreIds.length > 0) {
+    query.set("genreIds", filters.genreIds.join(","));
+  }
+  if (filters.sortBy) query.set("sortBy", filters.sortBy);
+  if (filters.voteCountGte != null) query.set("voteCountGte", String(filters.voteCountGte));
+  if (filters.dateGte) query.set("dateGte", filters.dateGte);
+  if (filters.dateLte) query.set("dateLte", filters.dateLte);
+  if (filters.crewId != null) query.set("crewId", String(filters.crewId));
+
+  const res = await fetch(`/api/discover?${query.toString()}`);
   if (!res.ok) throw new Error("Failed to load discovery feed");
   return res.json();
 }
@@ -34,8 +58,9 @@ async function fetchProviders(
 
 export function useDiscoveryFeed(
   mediaType: MediaType,
-  watchRegion: string,
-  providerIds: number[]
+  watchRegions: string[],
+  providerIds: number[],
+  filters: DiscoveryFilterParams = {}
 ) {
   const [items, setItems] = useState<DiscoveryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,28 +69,43 @@ export function useDiscoveryFeed(
   const cacheRef = useRef<Map<string, CountryAvailability[]>>(new Map());
   const nextPageRef = useRef(1);
   const generationRef = useRef<number>(0);
+  const watchRegionsKey = watchRegions.join(",");
   const providerIdsKey = providerIds.join(",");
+  const genreIdsKey = (filters.genreIds ?? []).join(",");
+  const filtersKey = [
+    filters.sortBy ?? "",
+    filters.voteCountGte ?? "",
+    filters.dateGte ?? "",
+    filters.dateLte ?? "",
+    filters.crewId ?? "",
+  ].join("|");
 
   const run = useCallback(
     async (reset: boolean) => {
       const requestId = ++generationRef.current;
       setLoading(true);
       setError(null);
+      if (reset) {
+        // Clear stale results from a prior filter selection immediately so a
+        // failed fetch after a filter change doesn't leave old-filter items
+        // rendered underneath the error box.
+        setItems([]);
+        setHasMore(true);
+      }
       try {
         const startPage = reset ? 1 : nextPageRef.current;
         const result = await fetchDiscoveryFeed({
           mediaType,
-          watchRegion,
+          watchRegions,
           startPage,
           maxPages: MAX_PAGES,
           targetCount: TARGET_COUNT,
           selectedProviderIds: providerIds,
           cache: cacheRef.current,
-          fetchDiscoverPage: (page) =>
-            fetchDiscoverPage(mediaType, watchRegion, providerIds, page),
+          fetchDiscoverPage: (watchRegion, page) =>
+            fetchDiscoverPage(mediaType, watchRegion, providerIds, page, filters),
           fetchProviders,
         });
-        // Only apply results if this is still the latest request
         if (requestId === generationRef.current) {
           setItems((prev) => {
             if (reset) return result.items;
@@ -79,20 +119,19 @@ export function useDiscoveryFeed(
           setHasMore(result.hasMore);
         }
       } catch {
-        // Only apply error if this is still the latest request
         if (requestId === generationRef.current) {
           setError("Failed to load the discovery feed. Please try again.");
         }
       } finally {
-        // Only clear loading if this was the latest request
         if (requestId === generationRef.current) {
           setLoading(false);
         }
       }
     },
-    // providerIdsKey stands in for providerIds (array identity is unstable across renders)
+    // watchRegionsKey/providerIdsKey/genreIdsKey/filtersKey stand in for their
+    // corresponding array/object args (identity is unstable across renders)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mediaType, watchRegion, providerIdsKey]
+    [mediaType, watchRegionsKey, providerIdsKey, genreIdsKey, filtersKey]
   );
 
   useEffect(() => {
@@ -100,9 +139,10 @@ export function useDiscoveryFeed(
     nextPageRef.current = 1;
     run(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mediaType, watchRegion, providerIdsKey]);
+  }, [mediaType, watchRegionsKey, providerIdsKey, genreIdsKey, filtersKey]);
 
   const loadMore = useCallback(() => run(false), [run]);
+  const retry = useCallback(() => run(true), [run]);
 
-  return { items, loading, error, hasMore, loadMore };
+  return { items, loading, error, hasMore, loadMore, retry };
 }

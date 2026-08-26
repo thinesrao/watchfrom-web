@@ -1,5 +1,6 @@
 import type { SearchResult, CountryAvailability, WatchProvider } from "./types";
 import { countryName, flagEmoji } from "./countries";
+import type { DiscoverSortBy } from "./sort-options";
 
 const BASE_URL = "https://api.themoviedb.org/3";
 
@@ -102,12 +103,52 @@ export async function discoverTitles(params: {
   watchRegion: string;
   providerIds: number[];
   page: number;
+  genreIds?: number[];
+  sortBy?: DiscoverSortBy;
+  voteCountGte?: number;
+  dateGte?: string;
+  dateLte?: string;
+  crewId?: number;
 }): Promise<{ results: SearchResult[]; totalPages: number }> {
-  const { mediaType, watchRegion, providerIds, page } = params;
-  const url =
-    `${BASE_URL}/discover/${mediaType}?watch_region=${watchRegion}` +
-    `&with_watch_providers=${providerIds.join("|")}` +
-    `&with_watch_monetization_types=flatrate&sort_by=popularity.desc&page=${page}`;
+  const {
+    mediaType,
+    watchRegion,
+    providerIds,
+    page,
+    genreIds,
+    sortBy,
+    voteCountGte,
+    dateGte,
+    dateLte,
+    crewId,
+  } = params;
+
+  const query = new URLSearchParams({
+    watch_region: watchRegion,
+    with_watch_providers: providerIds.join("|"),
+    with_watch_monetization_types: "flatrate",
+    sort_by: sortBy ?? "popularity.desc",
+    page: String(page),
+  });
+
+  if (genreIds && genreIds.length > 0) {
+    query.set("with_genres", genreIds.join("|"));
+  }
+  if (voteCountGte != null) {
+    query.set("vote_count.gte", String(voteCountGte));
+  }
+  const dateField = mediaType === "movie" ? "primary_release_date" : "first_air_date";
+  if (dateGte) {
+    query.set(`${dateField}.gte`, dateGte);
+  }
+  if (dateLte) {
+    query.set(`${dateField}.lte`, dateLte);
+  }
+  if (crewId != null && mediaType === "movie") {
+    query.set("with_crew", String(crewId));
+  }
+
+  const url = `${BASE_URL}/discover/${mediaType}?${query.toString()}`;
   const res = await fetch(url, { headers: headers() });
 
   if (!res.ok) {

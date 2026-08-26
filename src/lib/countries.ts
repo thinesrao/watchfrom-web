@@ -45,6 +45,12 @@ const COUNTRIES: Record<string, string> = {
   YE: "Yemen", YT: "Mayotte", ZA: "South Africa", ZM: "Zambia", ZW: "Zimbabwe",
 };
 
+export const DISCOVERY_COUNTRIES: string[] = [
+  "US", "GB", "JP", "KR", "DE", "CA", "AU",
+  "FR", "ES", "IT", "NL", "SE", "BR", "MX",
+  "IN", "PH", "ID", "MY", "TH", "NZ", "IE",
+];
+
 export function countryName(code: string): string {
   return COUNTRIES[code.toUpperCase()] ?? code;
 }
