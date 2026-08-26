@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 70" width="64" height="70" role="img" aria-label="watchfrom">
+  <defs>
+    <linearGradient id="wf-pin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6DDBEB"/>
+      <stop offset="1" stop-color="#2E9FB8"/>
+    </linearGradient>
+  </defs>
+  <path fill-rule="evenodd" fill="url(#wf-pin)" d="M32 4 C19 4 8.5 14.4 8.5 27.2 C8.5 41.8 32 63 32 63 C32 63 55.5 41.8 55.5 27.2 C55.5 14.4 45 4 32 4 Z M27 17.5 L27 37 L44 27.3 Z"/>
+</svg>

@@ -6,14 +6,17 @@ import { usePathname } from "next/navigation";
 const TABS = [
   {
     href: "/",
-    label: "Search",
+    label: "Home",
     match: (path: string) => path === "/",
     icon: (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15Zm10.5 2-5.4-5.4"
-      />
+      <>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 2a7 7 0 0 0-7 7c0 5.25 7 12 7 12s7-6.75 7-12a7 7 0 0 0-7-7Z"
+        />
+        <path fill="currentColor" stroke="none" d="M10.2 6.4 10.2 11.6 14 9Z" />
+      </>
     ),
   },
   {

@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import type { SearchResult } from "@/lib/types";
 import { useSearchHistory } from "@/lib/use-search-history";
 import SearchResultCard from "@/components/search-result-card";
+import PinLoader from "@/components/pin-loader";
 
 const SEARCH_CACHE_KEY = "watchfrom:search-cache";
 
@@ -134,7 +135,7 @@ export default function SearchPage() {
         />
         {loading && (
           <div className="absolute right-4 top-1/2 -translate-y-1/2">
-            <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+            <PinLoader size={18} halo={false} />
           </div>
         )}
       </div>

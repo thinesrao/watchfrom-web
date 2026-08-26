@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans, Space_Grotesk } from "next/font/google";
 import Link from "next/link";
 import BottomNav from "@/components/bottom-nav";
+import Logo from "@/components/logo";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -35,11 +36,8 @@ export default function RootLayout({
         <div className="sticky top-0 z-50 px-3 pt-3 sm:px-6">
           <nav className="max-w-5xl mx-auto glass rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.4)]">
             <div className="px-4 h-14 flex items-center justify-between">
-              <Link
-                href="/"
-                className="font-display font-semibold text-xl tracking-tight bg-gradient-to-r from-accent to-[#A8E6F0] bg-clip-text text-transparent"
-              >
-                WatchFrom
+              <Link href="/" aria-label="watchfrom home" className="flex items-center">
+                <Logo />
               </Link>
               <div className="hidden sm:flex items-center gap-4">
                 <Link

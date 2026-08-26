@@ -8,6 +8,7 @@ import type { CountryAvailability as CountryAvailabilityType, WatchProvider } fr
 import { useWatchlist } from "@/lib/use-watchlist";
 import SgAvailability from "@/components/sg-availability";
 import WorldwideAvailability from "@/components/worldwide-availability";
+import PinLoader from "@/components/pin-loader";
 
 function hasAvailabilityChanged(
   snapshot: Record<string, WatchProvider[]>,
@@ -194,7 +195,7 @@ export default function DetailPage() {
 
       {loading && (
         <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          <PinLoader size={32} />
         </div>
       )}
 
