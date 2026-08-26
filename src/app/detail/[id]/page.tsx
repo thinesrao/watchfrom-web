@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import type { CountryAvailability as CountryAvailabilityType, WatchProvider } from "@/lib/types";
 import { useWatchlist } from "@/lib/use-watchlist";
 import SgAvailability from "@/components/sg-availability";
@@ -43,6 +42,19 @@ function hasAvailabilityChanged(
 export default function DetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Return to wherever the user came from (search, discovery, or watchlist),
+  // preserving that page's scroll position and filter state — falling back to
+  // the search page only when there's no in-app history (e.g. a shared deep
+  // link opened directly).
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/");
+    }
+  };
   const id = params.id as string;
   const type = searchParams.get("type") ?? "movie";
   const title = searchParams.get("title") ?? "Details";
@@ -54,6 +66,7 @@ export default function DetailPage() {
   const trailerUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`${title} trailer`)}`;
 
   const [availability, setAvailability] = useState<CountryAvailabilityType[]>([]);
+  const [directors, setDirectors] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { items, isInWatchlist, addToWatchlist, removeFromWatchlist, updateSnapshot } =
@@ -90,6 +103,32 @@ export default function DetailPage() {
     load();
   }, [id, type]);
 
+  // Director/creator credits load independently of availability — a credits
+  // failure should not block the streaming data or surface a page error.
+  useEffect(() => {
+    let active = true;
+    async function loadCredits() {
+      if (active) setDirectors([]);
+      try {
+        const res = await fetch(`/api/credits?id=${id}&type=${type}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (active) setDirectors(data.directors ?? []);
+      } catch {
+        // Non-critical: leave directors empty on failure.
+      }
+    }
+    loadCredits();
+    return () => {
+      active = false;
+    };
+  }, [id, type]);
+
+  const directorLabel =
+    directors.length > 0
+      ? `${type === "tv" ? "Created by" : directors.length > 1 ? "Directors" : "Directed by"} ${directors.join(", ")}`
+      : null;
+
   const buildSnapshot = (): Record<string, WatchProvider[]> => {
     const snapshot: Record<string, WatchProvider[]> = {};
     for (const country of availability) {
@@ -122,9 +161,25 @@ export default function DetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link href="/" className="text-accent text-sm hover:text-accent-hover transition-colors">
-        &larr; Back to search
-      </Link>
+      <button
+        type="button"
+        onClick={handleBack}
+        className="group -ml-2 inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-medium text-text-dim hover:text-accent hover:bg-surface transition-colors"
+        aria-label="Go back"
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          className="transition-transform group-hover:-translate-x-0.5"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 18l-6-6 6-6" />
+        </svg>
+        Back
+      </button>
 
       <div className="flex gap-4 items-start">
         {poster && (
@@ -140,27 +195,35 @@ export default function DetailPage() {
         )}
         <div className="space-y-2 min-w-0 flex-1">
           <h1 className="font-display text-xl font-semibold tracking-tight">{title}</h1>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-text-dim uppercase tracking-wide">
+          <div className="flex items-center gap-2.5">
+            <span className="text-sm text-text-dim uppercase tracking-wide">
               {type === "movie" ? "Movie" : "TV Show"}
             </span>
-            {year && <span className="text-xs text-text-dim">{year}</span>}
+            {year && <span className="text-sm text-text-dim">{year}</span>}
             {voteAverage != null && voteAverage > 0 && (
-              <span className="text-xs text-gold">{voteAverage.toFixed(1)}</span>
+              <span className="inline-flex items-center gap-1 text-sm font-medium text-gold">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 2l2.9 6.26 6.1.53-4.6 4.02 1.38 6.19L12 15.9 6.22 19l1.38-6.19-4.6-4.02 6.1-.53L12 2z" />
+                </svg>
+                {voteAverage.toFixed(1)}
+              </span>
             )}
             <a
               href={trailerUrl}
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`Watch ${title} trailer on YouTube`}
-              className="text-text-dim hover:text-accent transition-colors"
+              className="-my-1 ml-auto inline-flex items-center justify-center rounded-lg p-1.5 text-text-dim hover:text-accent hover:bg-surface transition-colors"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}>
                 <rect x="2.5" y="5.5" width="19" height="13" rx="3.5" strokeLinejoin="round" />
                 <path d="M10.5 9.5v5l4.5-2.5-4.5-2.5Z" fill="currentColor" stroke="none" />
               </svg>
             </a>
           </div>
+          {directorLabel && (
+            <p className="text-sm text-text-dim">{directorLabel}</p>
+          )}
           <div className="flex items-center gap-2 mt-1">
             <button
               onClick={handleToggleWatchlist}

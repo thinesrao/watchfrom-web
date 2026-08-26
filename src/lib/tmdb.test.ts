@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
-import { discoverTitles } from "./tmdb";
+import { discoverTitles, getDirectors } from "./tmdb";
 
 const originalFetch = global.fetch;
 const originalEnv = process.env.TMDB_API_READ_ACCESS_TOKEN;
@@ -179,5 +179,63 @@ describe("discoverTitles", () => {
     await discoverTitles({ mediaType: "movie", watchRegion: "US", providerIds: [8], page: 1 });
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("getDirectors", () => {
+  it("returns the movie's Director crew credits, deduped", async () => {
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        crew: [
+          { job: "Director", name: "Christopher Nolan" },
+          { job: "Writer", name: "Christopher Nolan" },
+          { job: "Producer", name: "Emma Thomas" },
+        ],
+      }),
+    })) as unknown as typeof fetch;
+
+    const directors = await getDirectors(157336, "movie");
+    expect(directors).toEqual(["Christopher Nolan"]);
+    const calledUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    expect(calledUrl).toContain("/movie/157336/credits");
+  });
+
+  it("returns co-directors for movies with more than one Director", async () => {
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        crew: [
+          { job: "Director", name: "Joel Coen" },
+          { job: "Director", name: "Ethan Coen" },
+        ],
+      }),
+    })) as unknown as typeof fetch;
+
+    expect(await getDirectors(1, "movie")).toEqual(["Joel Coen", "Ethan Coen"]);
+  });
+
+  it("returns the show's created_by names for TV", async () => {
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        created_by: [{ name: "Vince Gilligan" }, { name: "Peter Gould" }],
+      }),
+    })) as unknown as typeof fetch;
+
+    const directors = await getDirectors(1396, "tv");
+    expect(directors).toEqual(["Vince Gilligan", "Peter Gould"]);
+    const calledUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    expect(calledUrl).toContain("/tv/1396");
+    expect(calledUrl).not.toContain("/credits");
+  });
+
+  it("returns an empty array when there is no director credit", async () => {
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ crew: [{ job: "Producer", name: "Someone" }] }),
+    })) as unknown as typeof fetch;
+
+    expect(await getDirectors(1, "movie")).toEqual([]);
   });
 });

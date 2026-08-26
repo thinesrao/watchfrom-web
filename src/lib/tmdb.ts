@@ -207,3 +207,34 @@ async function isCreditedAsDirector(
   const crew = (data.crew ?? []) as Array<{ id: number; job: string }>;
   return crew.some((c) => c.id === personId && c.job === "Director");
 }
+
+/**
+ * Returns the director(s) of a title. Movies use the crew credit with job
+ * "Director"; TV shows have no single director (episodes are directed
+ * individually), so the show's `created_by` creators are returned as the
+ * closest equivalent. Names are de-duplicated, order preserved.
+ */
+export async function getDirectors(
+  tmdbId: number,
+  mediaType: "movie" | "tv"
+): Promise<string[]> {
+  if (mediaType === "tv") {
+    const url = `${BASE_URL}/tv/${tmdbId}`;
+    const res = await fetch(url, { headers: headers() });
+    if (!res.ok) {
+      throw new Error(`TMDB tv details failed: ${res.status}`);
+    }
+    const data = await res.json();
+    const creators = (data.created_by ?? []) as Array<{ name: string }>;
+    return [...new Set(creators.map((c) => c.name).filter(Boolean))];
+  }
+
+  const url = `${BASE_URL}/movie/${tmdbId}/credits`;
+  const res = await fetch(url, { headers: headers() });
+  if (!res.ok) {
+    throw new Error(`TMDB movie credits failed: ${res.status}`);
+  }
+  const data = await res.json();
+  const crew = (data.crew ?? []) as Array<{ job: string; name: string }>;
+  return [...new Set(crew.filter((c) => c.job === "Director").map((c) => c.name))];
+}
