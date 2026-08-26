@@ -21,6 +21,13 @@ export const DIRECTORS: Director[] = [
   { id: 1769, name: "Sofia Coppola" },
   { id: 10828, name: "Guillermo del Toro" },
   { id: 9033, name: "Christopher McQuarrie" },
+  { id: 129561, name: "Josh Safdie" },
+  { id: 11614, name: "M. Night Shyamalan" },
+  { id: 10099, name: "Park Chan-wook" },
+  { id: 1776, name: "Francis Ford Coppola" },
+  { id: 4027, name: "Frank Darabont" },
+  { id: 39996, name: "Sidney Lumet" },
+  { id: 240, name: "Stanley Kubrick" },
 ];
 
 export function directorName(id: number): string {
