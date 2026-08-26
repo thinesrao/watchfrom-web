@@ -304,4 +304,64 @@ describe("fetchDiscoveryFeed", () => {
       })
     ).rejects.toThrow();
   });
+
+  it("includes SG-available titles when includeSingapore is true and badges them as SG", async () => {
+    const page1 = { results: [title(1), title(2)], totalPages: 1 };
+    const fetchDiscoverPage = vi.fn().mockResolvedValue(page1);
+
+    const fetchProviders = vi.fn(async (id: number) => {
+      // title 1 is already on the selected provider (8) in SG -> normally locked
+      if (id === 1) return availabilityWithSg(8, 8);
+      // title 2 is unlockable (US only, not SG)
+      return availabilityWithSg(null, 8);
+    });
+
+    const result = await fetchDiscoveryFeed({
+      mediaType: "movie",
+      watchRegions: ["US"],
+      startPage: 1,
+      maxPages: MAX_PAGES,
+      targetCount: 5,
+      selectedProviderIds: [8],
+      includeSingapore: true,
+      cache: new Map(),
+      fetchDiscoverPage,
+      fetchProviders,
+    });
+
+    // both titles present now (SG-available one is no longer filtered out)
+    expect(result.items.map((i) => i.id).sort()).toEqual([1, 2]);
+
+    const sgItem = result.items.find((i) => i.id === 1)!;
+    expect(sgItem.countryCode).toBe("SG");
+    expect(sgItem.matchedProviderLabel).toBe("Netflix");
+
+    const foreignItem = result.items.find((i) => i.id === 2)!;
+    expect(foreignItem.countryCode).toBe("US");
+    expect(foreignItem.matchedProviderLabel).toBe("Netflix");
+  });
+
+  it("still excludes SG-available titles when includeSingapore is false (default)", async () => {
+    const page1 = { results: [title(1), title(2)], totalPages: 1 };
+    const fetchDiscoverPage = vi.fn().mockResolvedValue(page1);
+
+    const fetchProviders = vi.fn(async (id: number) => {
+      if (id === 1) return availabilityWithSg(8, 8); // locked in SG
+      return availabilityWithSg(null, 8); // unlockable
+    });
+
+    const result = await fetchDiscoveryFeed({
+      mediaType: "movie",
+      watchRegions: ["US"],
+      startPage: 1,
+      maxPages: MAX_PAGES,
+      targetCount: 5,
+      selectedProviderIds: [8],
+      cache: new Map(),
+      fetchDiscoverPage,
+      fetchProviders,
+    });
+
+    expect(result.items.map((i) => i.id)).toEqual([2]);
+  });
 });

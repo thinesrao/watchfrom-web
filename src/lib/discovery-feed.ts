@@ -23,6 +23,11 @@ export interface FetchDiscoveryFeedParams {
   maxPages: number;
   targetCount: number;
   selectedProviderIds: number[];
+  /** When true, titles already streaming on the selected services in
+   * Singapore are NOT filtered out (the default "unlockable-only" behavior).
+   * SG-available titles are then badged with their SG provider so they read
+   * as "watchable here now" alongside the unlockable foreign ones. */
+  includeSingapore?: boolean;
   /** Mutated in place: populated with cache misses as they are fetched. The
    * caller (hook) owns a session-lifetime cache and passes it in by reference
    * intentionally, so this map's contents change as a side effect of the call. */
@@ -66,6 +71,7 @@ export async function fetchDiscoveryFeed(
     maxPages,
     targetCount,
     selectedProviderIds,
+    includeSingapore = false,
     cache,
     fetchDiscoverPage,
     fetchProviders,
@@ -139,9 +145,16 @@ export async function fetchDiscoveryFeed(
       if (seenItems.has(itemKey)) continue;
 
       const availability = cache.get(itemKey) ?? [];
-      if (!isUnlockable(availability, selectedProviderIds)) continue;
+      if (!includeSingapore && !isUnlockable(availability, selectedProviderIds)) continue;
 
-      const sourceCountry = watchRegions
+      // Badge attribution: when including SG, an SG-available title is
+      // watchable here now — attribute it to SG (checked first) so it badges
+      // as SG. Otherwise (or when the title is not in SG) attribute it to the
+      // first browsed region with a matching flatrate provider.
+      const attributionRegions = includeSingapore
+        ? ["SG", ...watchRegions]
+        : watchRegions;
+      const sourceCountry = attributionRegions
         .map((region) => availability.find((c) => c.countryCode === region))
         .find((c) =>
           c?.providers.some(

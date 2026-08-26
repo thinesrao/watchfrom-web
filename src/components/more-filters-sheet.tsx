@@ -16,6 +16,8 @@ export interface MoreFiltersSheetProps {
   onDecadeChange: (label: string | null) => void;
   directorId: number | null;
   onDirectorChange: (id: number | null) => void;
+  includeSingapore: boolean;
+  onIncludeSingaporeChange: (value: boolean) => void;
 }
 
 export default function MoreFiltersSheet({
@@ -28,6 +30,8 @@ export default function MoreFiltersSheet({
   onDecadeChange,
   directorId,
   onDirectorChange,
+  includeSingapore,
+  onIncludeSingaporeChange,
 }: MoreFiltersSheetProps) {
   if (!open) return null;
 
@@ -48,6 +52,32 @@ export default function MoreFiltersSheet({
             Done
           </button>
         </div>
+
+        <button
+          type="button"
+          role="switch"
+          aria-checked={includeSingapore}
+          onClick={() => onIncludeSingaporeChange(!includeSingapore)}
+          className="flex w-full items-center justify-between gap-3 text-left"
+        >
+          <span className="flex flex-col">
+            <span className="text-sm font-medium">Include Singapore titles</span>
+            <span className="text-xs text-text-dim">
+              Also show titles already on your services here
+            </span>
+          </span>
+          <span
+            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+              includeSingapore ? "bg-accent" : "bg-surface-dim border border-border"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                includeSingapore ? "translate-x-[22px]" : "translate-x-0.5"
+              }`}
+            />
+          </span>
+        </button>
 
         <div className="space-y-2">
           <p className="text-xs text-text-dim uppercase tracking-wide">Service</p>

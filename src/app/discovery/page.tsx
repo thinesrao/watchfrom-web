@@ -27,6 +27,7 @@ export default function DiscoveryPage() {
   const [sortKey, setSortKey] = useState<SortKey>("trending");
   const [decadeLabel, setDecadeLabel] = useState<string | null>(null);
   const [directorId, setDirectorId] = useState<number | null>(null);
+  const [includeSingapore, setIncludeSingapore] = useState(false);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
 
   // Reset the genre filter when switching movie<->TV: genre ids are not
@@ -78,13 +79,15 @@ export default function DiscoveryPage() {
       dateGte: dateRange?.gte,
       dateLte: dateRange?.lte,
       crewId: effectiveDirectorId,
+      includeSingapore,
     }
   );
 
   const activeMoreFiltersCount =
     (serviceKey !== "all" ? 1 : 0) +
     (decadeLabel ? 1 : 0) +
-    (effectiveDirectorId ? 1 : 0);
+    (effectiveDirectorId ? 1 : 0) +
+    (includeSingapore ? 1 : 0);
 
   const chips: FilterChip[] = [
     serviceKey !== "all" && {
@@ -101,6 +104,11 @@ export default function DiscoveryPage() {
       key: "director",
       label: directorName(effectiveDirectorId),
       onRemove: () => setDirectorId(null),
+    },
+    includeSingapore && {
+      key: "include-sg",
+      label: "Including Singapore",
+      onRemove: () => setIncludeSingapore(false),
     },
     genreMode === "genre" && genreId != null && {
       key: "genre",
@@ -119,8 +127,9 @@ export default function DiscoveryPage() {
       <div className="space-y-2">
         <h1 className="font-display text-2xl font-semibold tracking-tight">Discovery</h1>
         <p className="text-text-dim text-sm">
-          Titles popular abroad on your services that aren&apos;t streaming
-          here in Singapore yet.
+          {includeSingapore
+            ? "Titles popular abroad on your services, including ones already streaming in Singapore."
+            : "Titles popular abroad on your services that aren't streaming here in Singapore yet."}
         </p>
       </div>
 
@@ -169,6 +178,8 @@ export default function DiscoveryPage() {
         onDecadeChange={setDecadeLabel}
         directorId={directorId}
         onDirectorChange={setDirectorId}
+        includeSingapore={includeSingapore}
+        onIncludeSingaporeChange={setIncludeSingapore}
       />
 
       {error && (
@@ -195,7 +206,9 @@ export default function DiscoveryPage() {
       {!loading && !error && items.length === 0 && (
         <div className="text-center py-12">
           <p className="text-text-dim">
-            No unlockable titles found for these filters.
+            {includeSingapore
+              ? "No titles found for these filters."
+              : "No unlockable titles found for these filters."}
           </p>
         </div>
       )}

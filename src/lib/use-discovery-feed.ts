@@ -17,6 +17,10 @@ export interface DiscoveryFilterParams {
   dateGte?: string;
   dateLte?: string;
   crewId?: number;
+  /** Feed-level filter (not a TMDB discover query param): when true, keep
+   * titles already streaming on the selected services in Singapore instead
+   * of filtering them out. */
+  includeSingapore?: boolean;
 }
 
 async function fetchDiscoverPage(
@@ -78,6 +82,7 @@ export function useDiscoveryFeed(
     filters.dateGte ?? "",
     filters.dateLte ?? "",
     filters.crewId ?? "",
+    filters.includeSingapore ? "1" : "",
   ].join("|");
 
   const run = useCallback(
@@ -101,6 +106,7 @@ export function useDiscoveryFeed(
           maxPages: MAX_PAGES,
           targetCount: TARGET_COUNT,
           selectedProviderIds: providerIds,
+          includeSingapore: filters.includeSingapore,
           cache: cacheRef.current,
           fetchDiscoverPage: (watchRegion, page) =>
             fetchDiscoverPage(mediaType, watchRegion, providerIds, page, filters),
