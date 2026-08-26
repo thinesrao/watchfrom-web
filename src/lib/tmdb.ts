@@ -177,5 +177,33 @@ export async function discoverTitles(params: {
     }
   );
 
+  if (crewId != null && mediaType === "movie" && results.length > 0) {
+    const isDirector = await Promise.all(
+      results.map((r) => isCreditedAsDirector(r.id, crewId))
+    );
+    return {
+      results: results.filter((_, i) => isDirector[i]),
+      totalPages: (data.total_pages as number) ?? 1,
+    };
+  }
+
   return { results, totalPages: (data.total_pages as number) ?? 1 };
+}
+
+/**
+ * TMDB's `with_crew` discover param matches ANY crew credit for that person
+ * (e.g. a "Thanks" special-thanks credit), not specifically a directing
+ * credit. This checks the movie's actual credits to confirm the person is
+ * credited with job "Director" before it's treated as a match.
+ */
+async function isCreditedAsDirector(
+  movieId: number,
+  personId: number
+): Promise<boolean> {
+  const url = `${BASE_URL}/movie/${movieId}/credits`;
+  const res = await fetch(url, { headers: headers() });
+  if (!res.ok) return false;
+  const data = await res.json();
+  const crew = (data.crew ?? []) as Array<{ id: number; job: string }>;
+  return crew.some((c) => c.id === personId && c.job === "Director");
 }

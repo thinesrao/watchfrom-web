@@ -120,4 +120,64 @@ describe("discoverTitles", () => {
     const calledUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
     expect(calledUrl).not.toContain("with_crew");
   });
+
+  it("drops results where the person's only credit is not a Director job, even though TMDB's with_crew matched them", async () => {
+    // TMDB's with_crew param matches ANY crew credit (e.g. a "Thanks" credit),
+    // so discover can return a title the person didn't actually direct.
+    global.fetch = vi.fn(async (url: string) => {
+      if (url.includes("/discover/")) {
+        return {
+          ok: true,
+          json: async () => ({
+            results: [
+              { id: 1, title: "Directed Film", release_date: "2020-01-01" },
+              { id: 2, title: "Thanked Film", release_date: "2023-01-01" },
+            ],
+            total_pages: 1,
+          }),
+        };
+      }
+      if (url.includes("/movie/1/credits")) {
+        return {
+          ok: true,
+          json: async () => ({
+            crew: [{ id: 525, job: "Director" }],
+          }),
+        };
+      }
+      if (url.includes("/movie/2/credits")) {
+        return {
+          ok: true,
+          json: async () => ({
+            crew: [{ id: 525, job: "Thanks" }],
+          }),
+        };
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    }) as unknown as typeof fetch;
+
+    const result = await discoverTitles({
+      mediaType: "movie",
+      watchRegion: "US",
+      providerIds: [8],
+      page: 1,
+      crewId: 525,
+    });
+
+    expect(result.results.map((r) => r.id)).toEqual([1]);
+  });
+
+  it("does not fetch credits when crewId is not provided", async () => {
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        results: [{ id: 1, title: "Some Film", release_date: "2020-01-01" }],
+        total_pages: 1,
+      }),
+    })) as unknown as typeof fetch;
+
+    await discoverTitles({ mediaType: "movie", watchRegion: "US", providerIds: [8], page: 1 });
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
 });
