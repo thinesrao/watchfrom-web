@@ -1,7 +1,7 @@
 // src/app/discovery/page.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDiscoveryFeed } from "@/lib/use-discovery-feed";
 import { SERVICES } from "@/lib/providers";
 import { DISCOVERY_COUNTRIES } from "@/lib/countries";
@@ -10,6 +10,10 @@ import { MOODS } from "@/lib/moods";
 import { DECADES, dateRangeForDecade } from "@/lib/decades";
 import { directorName } from "@/lib/directors";
 import { resolveSortBy, TOP_RATED_VOTE_COUNT_GTE, type SortKey } from "@/lib/sort-options";
+import {
+  loadDiscoveryFilters,
+  saveDiscoveryFilters,
+} from "@/lib/discovery-filter-storage";
 import DiscoveryCard from "@/components/discovery-card";
 import DiscoveryFilters from "@/components/discovery-filters";
 import MoreFiltersSheet from "@/components/more-filters-sheet";
@@ -18,17 +22,48 @@ import PinLoader from "@/components/pin-loader";
 import type { MediaType } from "@/lib/types";
 
 export default function DiscoveryPage() {
-  const [country, setCountry] = useState("US");
-  const [serviceKey, setServiceKey] = useState<string>("all");
-  const [mediaType, setMediaType] = useState<MediaType>("movie");
-  const [genreMode, setGenreMode] = useState<"genre" | "mood">("genre");
-  const [genreId, setGenreId] = useState<number | null>(null);
-  const [moodKey, setMoodKey] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("trending");
-  const [decadeLabel, setDecadeLabel] = useState<string | null>(null);
-  const [directorId, setDirectorId] = useState<number | null>(null);
-  const [includeSingapore, setIncludeSingapore] = useState(false);
+  // Restore any previously-chosen filters (read once, lazily, on first render)
+  // so returning from a title's detail page keeps them instead of resetting.
+  const [saved] = useState(() => loadDiscoveryFilters());
+  const [country, setCountry] = useState(saved?.country ?? "US");
+  const [serviceKey, setServiceKey] = useState<string>(saved?.serviceKey ?? "all");
+  const [mediaType, setMediaType] = useState<MediaType>(saved?.mediaType ?? "movie");
+  const [genreMode, setGenreMode] = useState<"genre" | "mood">(saved?.genreMode ?? "genre");
+  const [genreId, setGenreId] = useState<number | null>(saved?.genreId ?? null);
+  const [moodKey, setMoodKey] = useState<string | null>(saved?.moodKey ?? null);
+  const [sortKey, setSortKey] = useState<SortKey>(saved?.sortKey ?? "trending");
+  const [decadeLabel, setDecadeLabel] = useState<string | null>(saved?.decadeLabel ?? null);
+  const [directorId, setDirectorId] = useState<number | null>(saved?.directorId ?? null);
+  const [includeSingapore, setIncludeSingapore] = useState(saved?.includeSingapore ?? false);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
+
+  // Persist filter selections on every change so they survive a round-trip to
+  // a detail page. `moreFiltersOpen` is transient UI and intentionally omitted.
+  useEffect(() => {
+    saveDiscoveryFilters({
+      country,
+      serviceKey,
+      mediaType,
+      genreMode,
+      genreId,
+      moodKey,
+      sortKey,
+      decadeLabel,
+      directorId,
+      includeSingapore,
+    });
+  }, [
+    country,
+    serviceKey,
+    mediaType,
+    genreMode,
+    genreId,
+    moodKey,
+    sortKey,
+    decadeLabel,
+    directorId,
+    includeSingapore,
+  ]);
 
   // Reset the genre filter when switching movie<->TV: genre ids are not
   // shared between the two TMDB genre taxonomies (e.g. movie-only Horror=27
